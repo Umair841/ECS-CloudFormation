@@ -1,0 +1,92 @@
+Parameters:
+  VPCID:
+    Description: VPC id from the nested VPC Stack
+    Type: String
+
+  Subnet01:
+    Description: 1st Puclic Subnet id from VPC Stack
+    Type: String
+
+  Subnet02:
+    Description: 2nd Puclic Subnet id from VPC Stack
+    Type: String
+
+
+
+Resources:
+
+  UmairsLoadBGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SecurityGroup for Loadbalancer Open To World
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: Umair-LB-SecurityGroup
+
+  UmairAppLoadBalancer:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      Name: "Umair-App-LoadBalancer"
+      Scheme: internet-facing
+      Type: application
+      Subnets: 
+      - !Ref Subnet01
+      - !Ref Subnet02
+      SecurityGroups: 
+      - !Ref UmairsLoadBGroup
+      IpAddressType: "ipv4"
+      Tags:
+        - Key: Name
+          Value: UmaiR-ECS-LoadBalancer
+
+  LoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref UmairAppLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref UmairTargetGroup
+
+  UmairTargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      Name: "UmairTargetGroup"
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: "/"
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPort: "traffic-port"
+      HealthCheckProtocol: "HTTP"
+      HealthCheckTimeoutSeconds: 5
+      UnhealthyThresholdCount: 3
+      HealthyThresholdCount: 5
+      Matcher:
+        HttpCode: 200
+      VpcId: !Ref VPCID
+      HealthCheckEnabled: true
+
+Outputs:
+  TargitGroupID:
+    Description: ID of targit Group is
+    Value: !Ref UmairTargetGroup
+
+  LoadBalancerSecurityGroup:
+    Description: load balacer SecurityGroup id
+    Value: !Ref UmairsLoadBGroup
+
+  LoadBalancerDNS:
+    Value: !GetAtt UmairAppLoadBalancer.DNSName
+    Description: DNS name of LoadBalancer.
+
+  LBSecurityGroupID:
+    Value: !Ref UmairsLoadBGroup
+    Description: id of load balancers Security Group . the only group from which we can access our app .

@@ -1,0 +1,108 @@
+Parameters:
+
+  1stPublicSAZ:
+    Description: Select Availability Zone For Your 1st Public Subnet .
+    Type: AWS::EC2::AvailabilityZone::Name
+
+  2ndPublicSAZ:
+    Description: Select Availability Zone For Your 2nd Public Subnet .
+    Type: AWS::EC2::AvailabilityZone::Name
+
+  DemoVpcCIDR:
+    Description: What Should Be The CIDR Block For VPC ?
+    Type: String
+
+  PublicS1CIDR:
+    Description: What Should be the CIDR Block of 1st Public Subnet ?
+    Type: String
+
+  PublicS2CIDR:
+    Description: What Should be the CIDR Block of 2nd Public Subnet ?
+    Type: String
+
+Resources:
+  DemoVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref DemoVpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: Umair-DemoVPC
+
+  InternetGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: DemoIGW
+
+  InternetGWAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGW
+      VpcId: !Ref DemoVPC
+
+  PublicS1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref DemoVPC
+      AvailabilityZone: !Ref 1stPublicSAZ
+      CidrBlock: !Ref PublicS1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: Umair-1stPublicSubnet
+
+  PublicS2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref DemoVPC
+      AvailabilityZone: !Ref 2ndPublicSAZ
+      CidrBlock: !Ref PublicS2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: Umair-2ndPublicSubnet
+
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref DemoVPC
+      Tags:
+        - Key: Name
+          Value: RT-for-PublicSNS
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGWAttachment
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGW
+
+  PublicS1RTAss:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRT
+      SubnetId: !Ref PublicS1
+
+  PublicS2RTAss:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRT
+      SubnetId: !Ref PublicS2
+
+Outputs:
+  PuclicSN1ID:
+    Description: subnet id of public subnet
+    Value: !Ref PublicS1
+
+  PuclicSN2ID:
+    Description: subnet id of public subnet
+    Value: !Ref PublicS2
+
+  VpcId:
+    Description: ID of VPC as output
+    Value: !Ref DemoVPC
